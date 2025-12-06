@@ -1,4 +1,5 @@
 // Simple table search for brand/products
+// SAI kiran shairing me th elive ocde
 function filterTable(inputId, tableId) {
     const input = document.getElementById(inputId);
     const table = document.getElementById(tableId);
