@@ -30,39 +30,24 @@ app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change_this_secret_key")
 
 RAZORPAY_KEY = os.getenv("RAZORPAY_KEY")
 RAZORPAY_SECRET = os.getenv("RAZORPAY_SECRET")
-MONGO_URL = os.getenv("MONGODB_URI")
-
+MONGO_URL = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
+SUCCESS_URL = os.getenv("SUCCESS_URL", "/order-success")
+FAILED_URL = os.getenv("FAILED_URL", "/checkout")
 
 # Razorpay Client
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY, RAZORPAY_SECRET))
 
 # =====================================================
-# MONGO DB (FULLY FIXED)
+# MONGO DB
 # =====================================================
-MONGO_URL = os.getenv("MONGODB_URI")
+mongo = MongoClient(MONGO_URL)
+db = mongo["dreamx"]
 
-try:
-    mongo = MongoClient(MONGO_URL)
-
-    # If database name is not inside the URI, fallback to "dreamx"
-    if mongo.get_default_database() is not None:
-        db = mongo.get_default_database()
-    else:
-        db = mongo["dreamx"]
-
-    print(f"MongoDB Connected Successfully → {db.name}")
-
-except Exception as e:
-    print("MongoDB Connection Failed:", e)
-    raise SystemExit("❌ Cannot start server without MongoDB connection")
-
-# Collections
 users_col = db["users"]
 cart_col = db["cart"]
 orders_col = db["orders"]
 products_col = db["products"]
 banners_col = db["banners"]
-
 
 # =====================================================
 # UPLOAD SETTINGS
