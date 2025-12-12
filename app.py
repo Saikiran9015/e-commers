@@ -662,10 +662,7 @@ def delete_banner(banner_id):
 
     banner = banners_col.find_one({"_id": ObjectId(banner_id)})
     if banner:
-        try:
-            os.remove(os.path.join(app.config["UPLOAD_FOLDER"], banner["image_filename"]))
-        except Exception:
-            pass
+        # Base64 images are in DB, so no file to delete
         banners_col.delete_one({"_id": ObjectId(banner_id)})
 
     flash("Banner deleted!", "success")
