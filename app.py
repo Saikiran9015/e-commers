@@ -719,61 +719,84 @@ def add_product():
         return need
 
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        price = request.form.get("price", "").strip()
-        old_price = request.form.get("old_price", "").strip()
-        description = request.form.get("description", "").strip()
-        selected_sizes = request.form.getlist("sizes")
-
-        # ⭐️ Rating added
-        rating_raw = request.form.get("rating")
         try:
-            rating = float(rating_raw)
-        except:
-            rating = None
+            name = request.form.get("name", "").strip()
+            price_raw = request.form.get("price", "").strip()
+            old_price_raw = request.form.get("old_price", "").strip()
+            description = request.form.get("description", "").strip()
+            selected_sizes = request.form.getlist("sizes")
 
-        # stock per size
-        stock = {}
-        for s in ["S", "M", "L", "XL", "XXL"]:
-            qty_str = request.form.get(f"stock_{s}", "0")
+            if not name or not price_raw:
+                flash("Product Name and Price are required!", "error")
+                return redirect(url_for("add_product"))
+
             try:
-                qty = int(qty_str)
+                price = float(price_raw)
             except ValueError:
-                qty = 0
-            if s in selected_sizes and qty > 0:
-                stock[s] = qty
+                flash("Invalid Price value! Please enter a number.", "error")
+                return redirect(url_for("add_product"))
 
-        image_files = request.files.getlist("images")
-        saved_images = []
+            old_price = None
+            if old_price_raw:
+                try:
+                    old_price = float(old_price_raw)
+                except ValueError:
+                    pass # Just ignore if invalid, since it is optional
 
-        for file in image_files[:4]:
-            if file and allowed_file(file.filename):
-                filename = datetime.datetime.now().strftime("%Y%m%d%H%M%S") + "_" + secure_filename(file.filename)
-                file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
-                saved_images.append(filename)
+            # ⭐️ Rating added
+            rating_raw = request.form.get("rating")
+            try:
+                rating = float(rating_raw)
+            except:
+                rating = None
 
-        if not saved_images:
-            flash("Upload at least one image", "error")
+            # stock per size
+            stock = {}
+            for s in ["S", "M", "L", "XL", "XXL"]:
+                qty_str = request.form.get(f"stock_{s}", "0")
+                try:
+                    qty = int(qty_str)
+                except ValueError:
+                    qty = 0
+                if s in selected_sizes and qty > 0:
+                    stock[s] = qty
+
+            image_files = request.files.getlist("images")
+            saved_images = []
+
+            for file in image_files[:4]:
+                if file and allowed_file(file.filename):
+                    filename = datetime.datetime.now().strftime("%Y%m%d%H%M%S") + "_" + secure_filename(file.filename)
+                    file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+                    saved_images.append(filename)
+
+            if not saved_images:
+                flash("Upload at least one image", "error")
+                return redirect(url_for("add_product"))
+
+            main_image = saved_images[0]
+
+            # insert DB
+            products_col.insert_one({
+                "name": name,
+                "description": description,
+                "price": price,
+                "old_price": old_price,
+                "image_filename": main_image,
+                "images": saved_images,
+                "sizes": selected_sizes,
+                "stock": stock,
+                "rating": rating,     # ⭐️ Stored Here
+                "created_at": datetime.datetime.now()
+            })
+
+            flash("Product added!", "success")
+            return redirect(url_for("admin_products"))
+
+        except Exception as e:
+            print(f"Error in add_product: {e}")
+            flash(f"An error occurred: {str(e)}", "error")
             return redirect(url_for("add_product"))
-
-        main_image = saved_images[0]
-
-        # insert DB
-        products_col.insert_one({
-            "name": name,
-            "description": description,
-            "price": float(price),
-            "old_price": float(old_price) if old_price else None,
-            "image_filename": main_image,
-            "images": saved_images,
-            "sizes": selected_sizes,
-            "stock": stock,
-            "rating": rating,     # ⭐️ Stored Here
-            "created_at": datetime.datetime.now()
-        })
-
-        flash("Product added!", "success")
-        return redirect(url_for("admin_products"))
 
     return render_template("upload.html", active_page="upload")
 #====================================================
